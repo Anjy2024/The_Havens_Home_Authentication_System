@@ -2,11 +2,13 @@ import cv2
 import numpy as np
 import threading
 import time
+import queue
+from collections import deque, Counter
 import datetime
 import os
 from pathlib import Path
 from core.config import config, SNAPSHOTS_DIR, DATA_DIR
-from core.database import log_intrusion_event, get_event_stats
+from core.database import log_intrusion_event, get_event_stats, log_access_event
 from core.face_engine import face_engine
 from core.camera import camera
 from core.mailer import mailer
@@ -30,6 +32,10 @@ class SecurityController:
         self.last_alert_time = 0
         self.siren_thread = None
         self.stop_siren = False
+        self._last_access_log = {}   # identity -> time of last access-log entry
+        self._access_queue = queue.Queue(maxsize=200)
+        self._tracks = []            # people currently in front of the camera
+        threading.Thread(target=self._access_log_worker, daemon=True).start()
 
         # Live detection cache
         self.last_detected_faces = []
@@ -209,16 +215,18 @@ class SecurityController:
         # 2. Render Face Tracking Outlines & Tags
         for f in faces:
             x, y, fw, fh = f["bbox"]
-            is_known = f["is_known"]
+            status = f.get("status", "GRANTED" if f["is_known"] else "DENIED")
+            is_known = (status == "GRANTED")
 
-            if is_known:
+            if status == "VERIFYING":
+                color = (30, 170, 245)  # Amber
+                full_tag = "VERIFYING..."
+            elif is_known:
                 color = (70, 200, 90) # Clean green
-                name_text = f"{f['name']}"
-                role_text = f"{f.get('relationship', 'Resident')}"
-                full_tag = f"{name_text} ({role_text})"
+                full_tag = f"ACCESS GRANTED - {f['name']}" + (f" (d {f['distance']})" if config.get("show_match_distance", True) else "")
             else:
                 color = (40, 40, 235) # Clean red
-                full_tag = "Unrecognized Visitor"
+                full_tag = "ACCESS DENIED" + (f" (d {f['distance']})" if config.get("show_match_distance", True) and f.get("distance", 999) < 900 else "")
 
             # Draw clean bounding box
             cv2.rectangle(annotated, (x, y), (x + fw, y + fh), color, 2, cv2.LINE_AA)
@@ -248,6 +256,83 @@ class SecurityController:
 
         return annotated
 
+    def _smooth(self, faces):
+        """Turn noisy per-frame results into stable decisions.
+        GRANTED  : the same person won most of the recent frames.
+        DENIED   : still not recognised after `unknown_confirm_seconds`.
+        VERIFYING: not enough evidence yet (e.g. person is still turning to the camera)."""
+        now = time.time()
+        need = int(config.get("confirm_votes", 3))
+        wait = float(config.get("unknown_confirm_seconds", 2.0))
+        self._tracks = [t for t in self._tracks if now - t["last"] < 1.5]
+        used = set()
+        out = []
+        for f in faces:
+            x, y, w, h = f["bbox"]
+            cx, cy = x + w / 2.0, y + h / 2.0
+            best, best_d = None, 1e9
+            for i, t in enumerate(self._tracks):
+                if i in used:
+                    continue
+                d = ((t["cx"] - cx) ** 2 + (t["cy"] - cy) ** 2) ** 0.5
+                if d < best_d:
+                    best, best_d = i, d
+            if best is not None and best_d < max(w, h) * 1.2:
+                t = self._tracks[best]
+                used.add(best)
+            else:
+                t = {"hist": deque(maxlen=12), "born": now, "info": {}}
+                self._tracks.append(t)
+                used.add(len(self._tracks) - 1)
+            t.update(cx=cx, cy=cy, last=now)
+            t["hist"].append(f["name"] if f["is_known"] else None)
+            if f["is_known"]:
+                t["info"][f["name"]] = f
+            votes = Counter(n for n in t["hist"] if n)
+            g = dict(f)
+            top = votes.most_common(1)[0] if votes else None
+            if top and top[1] >= need and top[1] * 2 > len(t["hist"]):
+                g.update(t["info"][top[0]])
+                g["status"] = "GRANTED"
+                g["is_known"] = True
+            elif now - t["born"] >= wait:
+                g["status"] = "DENIED"
+                g["is_known"] = False
+                g["name"] = "UNKNOWN INTRUDER"
+            else:
+                g["status"] = "VERIFYING"
+                g["is_known"] = False
+            out.append(g)
+        return out
+
+    def _record_access(self, faces):
+        """Write GRANTED / DENIED entries to the access log with a per-person cooldown."""
+        cooldown = float(config.get("access_log_cooldown", 15))
+        now = time.time()
+        for f in faces:
+            if f.get("status") not in ("GRANTED", "DENIED"):
+                continue   # still verifying: do not log yet
+            key = f["name"] if f["is_known"] else "UNKNOWN"
+            if now - self._last_access_log.get(key, 0) < cooldown:
+                continue
+            self._last_access_log[key] = now
+            try:
+                if f["is_known"]:
+                    self._access_queue.put_nowait((f["name"], f.get("relationship", ""), "GRANTED", f.get("confidence", 0.0)))
+                else:
+                    self._access_queue.put_nowait(("Unrecognized visitor", "", "DENIED", 0.0))
+            except queue.Full:
+                pass
+
+    def _access_log_worker(self):
+        """Writes access-log rows in the background so the live video never waits on the database."""
+        while True:
+            name, rel, result, conf = self._access_queue.get()
+            try:
+                log_access_event(name, rel, result, conf)
+            except Exception as e:
+                print(f"[SecurityController] Could not write access log: {e}")
+
     def _security_loop(self):
         """Continuous surveillance worker: face recognition + alert trigger"""
         while self.running:
@@ -257,13 +342,16 @@ class SecurityController:
                 continue
 
             # Identify all faces in the frame
-            faces = face_engine.identify_faces(frame)
+            faces = self._smooth(face_engine.identify_faces(frame))
             self.last_detected_faces = faces
+
+            # Record every access decision (any mode), at most once per person per cooldown
+            self._record_access(faces)
 
             # Evaluate Security Rules
             if self.state in ["ARMED_AWAY", "ARMED_HOME"]:
-                has_unknown = any(not f["is_known"] for f in faces)
-                has_family = any(f["is_known"] for f in faces)
+                has_unknown = any(f["status"] == "DENIED" for f in faces)
+                has_family = any(f["status"] == "GRANTED" for f in faces)
 
                 if has_unknown:
                     # An unknown person is spotted while armed -> INTRUDER ALERT!

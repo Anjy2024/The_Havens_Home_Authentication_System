@@ -10,7 +10,10 @@ from core.database import (
     get_all_family_members,
     get_recent_intrusion_events,
     get_recent_emails,
-    get_event_stats
+    get_event_stats,
+    clear_intrusion_events,
+    get_recent_access_events,
+    clear_access_events
 )
 from core.face_engine import face_engine
 from core.camera import camera
@@ -18,7 +21,7 @@ from core.security_controller import security_controller
 from core.mailer import mailer
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
-app.config["SECRET_KEY"] = "home-security-master-key-2026"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-me-in-production")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 # Serve uploaded / generated data files
@@ -156,6 +159,36 @@ def api_get_events():
     limit = int(request.args.get("limit", 40))
     events = get_recent_intrusion_events(limit)
     return jsonify({"success": True, "events": events})
+
+@app.route("/api/events/clear", methods=["POST"])
+def api_clear_events():
+    """Delete all intrusion records and their snapshot photos (PIN protected)."""
+    data = request.get_json() or {}
+    if not security_controller.verify_pin(str(data.get("pin", ""))):
+        return jsonify({"success": False, "message": "Incorrect PIN. Nothing was deleted."}), 403
+    removed = clear_intrusion_events()
+    files = 0
+    for f in SNAPSHOTS_DIR.iterdir():
+        if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png"):
+            try:
+                f.unlink()
+                files += 1
+            except OSError:
+                pass
+    return jsonify({"success": True, "message": f"Cleared {removed} intrusion record(s) and {files} snapshot photo(s)."})
+
+@app.route("/api/access-log", methods=["GET"])
+def api_get_access_log():
+    limit = int(request.args.get("limit", 100))
+    return jsonify({"success": True, "entries": get_recent_access_events(limit)})
+
+@app.route("/api/access-log/clear", methods=["POST"])
+def api_clear_access_log():
+    data = request.get_json() or {}
+    if not security_controller.verify_pin(str(data.get("pin", ""))):
+        return jsonify({"success": False, "message": "Incorrect PIN. Nothing was deleted."}), 403
+    removed = clear_access_events()
+    return jsonify({"success": True, "message": f"Cleared {removed} access log entr{'y' if removed == 1 else 'ies'}."})
 
 @app.route("/api/emails", methods=["GET"])
 def api_get_emails():

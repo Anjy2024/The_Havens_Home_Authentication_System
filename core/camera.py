@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 import threading
@@ -76,15 +77,35 @@ class CameraStream:
 
         try:
             idx = int(src)
-            cap = cv2.VideoCapture(idx)
-            if cap.isOpened():
-                print(f"[Camera] Connected to physical webcam index {idx}")
+            # On Windows the default backend often fails, so try DirectShow and
+            # Media Foundation too. Also try the neighbouring index (0 <-> 1).
+            backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY] if os.name == "nt" else [cv2.CAP_ANY]
+            indexes = [idx, 1 if idx == 0 else 0]
+            cap = None
+            for backend in backends:
+                for i in indexes:
+                    candidate = cv2.VideoCapture(i, backend)
+                    ok = False
+                    if candidate.isOpened():
+                        for _ in range(5):  # let the sensor warm up
+                            ok, _frame = candidate.read()
+                            if ok:
+                                break
+                    if ok:
+                        print(f"[Camera] Connected to physical webcam index {i} (backend {backend})")
+                        cap = candidate
+                        break
+                    candidate.release()
+                if cap is not None:
+                    break
+            if cap is not None:
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
                 self.cap = cap
                 self.is_simulator = False
             else:
-                print(f"[Camera] Physical camera index {idx} unavailable. Using Virtual Simulator.")
+                print("[Camera] No physical webcam could be opened. Using Virtual Simulator. "
+                      "Close other apps using the camera and check Windows camera privacy settings.")
                 self.is_simulator = True
                 self.cap = None
         except Exception as e:

@@ -9,7 +9,7 @@ from core.database import (
     get_all_family_members,
     get_next_face_label,
     delete_family_member,
-    get_connection
+    get_family_member_by_id
 )
 
 MODEL_PATH = DATA_DIR / "face_model.xml"
@@ -251,14 +251,10 @@ class FaceEngine:
 
     def remove_member(self, member_id: int):
         """Remove a family member and retrain model"""
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT photo_path FROM family_members WHERE id = ?", (member_id,))
-        row = cur.fetchone()
-        conn.close()
+        member = get_family_member_by_id(member_id)
 
-        if row and row["photo_path"]:
-            p = DATA_DIR.parent / row["photo_path"]
+        if member and member.get("photo_path"):
+            p = DATA_DIR.parent / member["photo_path"]
             if p.exists():
                 try:
                     os.remove(p)
@@ -287,7 +283,7 @@ class FaceEngine:
 
         # Distance threshold from config (default ~70.0 for LBPH)
         # In LBPH, 0 = identical match, 50 = very strong match, 75 = moderate match, >80 = different person
-        threshold = float(config.get("face_confidence_threshold", 70.0))
+        threshold = float(config.get("match_threshold", 60.0))
 
         for (x, y, w, h) in faces:
             face_chip = self.preprocess_face(gray[y:y+h, x:x+w])
@@ -305,10 +301,30 @@ class FaceEngine:
                 continue
 
             try:
-                label, distance = self.recognizer.predict(face_chip)
-                
-                # Check if distance is below threshold and label is in members
-                if distance <= threshold and label in self.label_to_member:
+                # Collect the distance to every enrolled sample, then take the best one per PERSON
+                # (a person can have several photos enrolled under the same name).
+                collector = cv2.face.StandardCollector_create()
+                self.recognizer.predict_collect(face_chip, collector)
+                best_by_name = {}
+                for lbl, dist in collector.getResults(True):
+                    m = self.label_to_member.get(lbl)
+                    if not m:
+                        continue
+                    key = m["name"].strip().lower()
+                    if key not in best_by_name or dist < best_by_name[key][1]:
+                        best_by_name[key] = (lbl, dist)
+                ranked = sorted(best_by_name.values(), key=lambda t: t[1])
+                if not ranked:
+                    label, distance, second = -1, 999.0, None
+                else:
+                    label, distance = ranked[0]
+                    second = ranked[1][1] if len(ranked) > 1 else None
+
+                # Accept only if the match is close enough AND clearly better than the runner-up person
+                margin = float(config.get("match_margin", 8.0))
+                ok = (distance <= threshold and label in self.label_to_member
+                      and (second is None or (second - distance) >= margin))
+                if ok:
                     member = self.label_to_member[label]
                     # Calculate intuitive confidence % (e.g., distance 30 -> 75%, distance 50 -> 60%)
                     conf_pct = max(10.0, min(99.0, 100.0 - (distance * 0.75)))

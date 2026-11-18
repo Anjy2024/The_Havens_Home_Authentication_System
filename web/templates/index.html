@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Haven Home Security — Smart Protection & Family Access</title>
+  <title>The Haven's Home Authentication System</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
@@ -792,6 +792,98 @@
       background: #2a303c;
       border-radius: 4px;
     }
+
+    /* ---- Responsive additions ---- */
+    html, body { overflow-x: hidden; }
+    img { max-width: 100%; }
+    @media (max-width: 900px) {
+      header { flex-wrap: wrap; gap: 10px; padding: 10px 14px; position: static; }
+      .header-actions { flex-wrap: wrap; gap: 8px; }
+    }
+    @media (max-width: 640px) {
+      main { padding: 10px; gap: 12px; }
+      .brand-subtitle { display: none; }
+      .header-actions { width: 100%; }
+      .card { min-height: 0 !important; }
+      .video-viewport { min-height: 200px; }
+      .tabs-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .tab-item { white-space: nowrap; flex: 0 0 auto; }
+      .form-row, .sim-grid { grid-template-columns: 1fr; }
+      .family-list { grid-template-columns: 1fr 1fr; }
+      .family-header { flex-wrap: wrap; gap: 8px; }
+      .event-item { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .modal-box { width: 94vw; max-width: 94vw; padding: 16px; }
+    }
+    @media (max-width: 420px) { .family-list { grid-template-columns: 1fr; } }
+
+    /* Team footer */
+    .team-footer { max-width: 1560px; margin: 0 auto; padding: 8px 24px 28px; width: 100%; }
+    .team-footer h3 { font-size: 14px; margin-bottom: 4px; }
+    .team-footer p { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+    .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .team-member { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
+    .team-member img, .team-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin: 0 auto 8px; display: block; background: var(--surface-hover); }
+    .team-avatar { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 22px; color: var(--text-muted); }
+    .team-member b { display: block; font-size: 13px; }
+    .team-member span { font-size: 11px; color: var(--text-muted); }
+    .camera-live-badge { top: auto; bottom: 14px; }
+    .sim-banner { display: none; background: #7c2d12; color: #fff; font-size: 13px; padding: 10px 24px; text-align: center; }
+
+    /* ===== Light-blue theme (default) ===== */
+    .btn-primary { background: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    body.light-mode {
+      --bg: #eaf4ff; --surface: #ffffff; --surface-hover: #f0f7ff; --surface-elevated: #ffffff;
+      --border: #cfe3f7; --border-subtle: #e2effb;
+      --text-main: #0b2545; --text-muted: #4f6b8a; --text-faint: #8aa4bf;
+      --accent: #1e88e5; --accent-hover: #1565c0;
+      --green: #059669; --amber: #d97706; --red: #dc2626;
+    }
+    body.light-mode header { background: #ffffff; }
+    body.light-mode .brand-logo { background: #e3f1ff; border-color: #bfdcf7; color: #1e88e5; }
+    body.light-mode .mode-switch { background: #eaf4ff; border-color: #cfe3f7; }
+    body.light-mode .tabs-nav { background: #f0f7ff; border-bottom-color: #cfe3f7; }
+    body.light-mode .tab-item:hover { color: #0b2545; }
+    body.light-mode .tab-item.active,
+    body.light-mode .mode-btn.active { background: #ffffff; color: #0b2545; box-shadow: 0 1px 3px rgba(30, 136, 229, 0.2); }
+    body.light-mode .camera-footer { background: #f0f7ff; border-top-color: #cfe3f7; }
+    body.light-mode .metric-box,
+    body.light-mode .settings-section,
+    body.light-mode .family-card,
+    body.light-mode .event-item,
+    body.light-mode .sim-card,
+    body.light-mode .key-btn { background: #f5faff; border-color: #cfe3f7; }
+    body.light-mode .key-btn { color: #0b2545; }
+    body.light-mode .key-btn:hover,
+    body.light-mode .sim-card:hover { background: #e3f1ff; }
+    body.light-mode .section-title { color: #1565c0; }
+    body.light-mode .form-input { border-color: #bcd7f2; }
+    body.light-mode .btn-icon { background: #eaf4ff; border-color: #cfe3f7; color: #4f6b8a; }
+    body.light-mode .btn-icon:hover { background: #d6e9fb; color: #0b2545; }
+    body.light-mode .family-header h3,
+    body.light-mode #zoomCaption,
+    body.light-mode #outboxList strong { color: #0b2545 !important; }
+    body.light-mode #outboxList > div { background: #f5faff !important; }
+    body.light-mode [style*="background: #0f1115"] { background: #f0f7ff !important; }
+    body.light-mode .btn-primary[style*="#1e293b"] { background: #ffffff !important; color: #1565c0 !important; border: 1px solid #bcd7f2 !important; }
+
+    /* ===== Access history ===== */
+    .log-switch { display: flex; gap: 6px; margin-bottom: 14px; }
+    .log-btn { flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+    .log-btn.active { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+    .access-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface-hover); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+    .access-name { font-size: 13px; font-weight: 600; color: var(--text-main); }
+    .access-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .badge-granted, .badge-denied { font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 6px; white-space: nowrap; }
+    .badge-granted { background: var(--green-bg); color: var(--green); }
+    .badge-denied { background: var(--red-bg); color: var(--red); }
+
+    /* ---- Live access banner ---- */
+    .access-banner { padding: 12px 18px; font-size: 14px; font-weight: 700; text-align: center; border-bottom: 1px solid var(--border); background: var(--surface-hover); color: var(--text-muted); }
+    .access-banner small { display: block; font-size: 11px; font-weight: 500; margin-top: 2px; opacity: 0.9; }
+    .access-banner.granted { background: var(--green-bg); color: var(--green); }
+    .access-banner.denied { background: var(--red-bg); color: var(--red); }
+    .access-banner.verifying { background: var(--amber-bg); color: var(--amber); }
   </style>
 </head>
 <body>
@@ -803,8 +895,8 @@
         <i class="fa-solid fa-shield"></i>
       </div>
       <div>
-        <div class="brand-title">Haven Home Security</div>
-        <div class="brand-subtitle">Smart Intrusion Detection & Family Recognition</div>
+        <div class="brand-title" id="brandTitle">The Haven's Home Authentication System</div>
+        <div class="brand-subtitle" id="brandSubtitle">Facial Recognition Access Control</div>
       </div>
     </div>
 
@@ -848,6 +940,7 @@
       </button>
     </div>
   </header>
+  <div id="simBanner" class="sim-banner"><i class="fa-solid fa-triangle-exclamation"></i> Virtual Simulator is active. No real webcam is connected, so recognition results are NOT from real faces.</div>
 
   <!-- MAIN DASHBOARD -->
   <main>
@@ -867,6 +960,8 @@
           </button>
         </div>
       </div>
+
+      <div id="accessBanner" class="access-banner">Waiting for a visitor...</div>
 
       <!-- Live Video Viewport -->
       <div class="video-viewport">
@@ -950,18 +1045,44 @@
 
       <!-- TAB 2: ACTIVITY / INTRUSION LOG -->
       <div id="eventsTab" class="tab-pane custom-scroll">
+        <div class="log-switch">
+          <button id="logBtnAccess" class="log-btn active" onclick="showLog('access')">Access History</button>
+          <button id="logBtnIncidents" class="log-btn" onclick="showLog('incidents')">Security Incidents</button>
+        </div>
+
+        <div id="accessLogPanel">
+          <div class="family-header">
+            <div>
+              <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Access History</h3>
+              <p style="font-size: 11px; color: var(--text-muted);">Every person the camera has seen, with the access decision.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button onclick="loadAccessLog()" class="btn-icon" title="Refresh"><i class="fa-solid fa-arrows-rotate"></i></button>
+              <button onclick="clearAccessLog()" class="btn-icon" title="Clear access history"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+          <div id="accessLogContainer"></div>
+        </div>
+
+        <div id="incidentsPanel" style="display: none;">
         <div class="family-header">
           <div>
             <h3 style="font-size: 14px; font-weight: 700; color: #fff;">Security Incidents</h3>
             <p style="font-size: 11px; color: var(--text-muted);">Timestamped captures of unrecognized visitors.</p>
           </div>
-          <button onclick="loadEvents()" class="btn-icon" title="Refresh">
-            <i class="fa-solid fa-arrows-rotate"></i>
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button onclick="loadEvents()" class="btn-icon" title="Refresh">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
+            <button onclick="clearEvents()" class="btn-icon" title="Clear all intrusion records">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
         </div>
 
         <div id="eventsListContainer">
           <!-- Populated dynamically -->
+        </div>
         </div>
       </div>
 
@@ -1117,13 +1238,12 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Relationship / Role</label>
+        <label class="form-label">Household Role</label>
         <select id="enrollRelationship" class="form-input">
-          <option value="Homeowner">Homeowner / Primary Resident</option>
-          <option value="Spouse">Spouse / Partner</option>
+          <option value="Homeowner">Homeowner</option>
+          <option value="Parent">Parent</option>
           <option value="Child">Child</option>
-          <option value="Parent">Parent / Relative</option>
-          <option value="Guest">Frequent Guest</option>
+          <option value="Family Member">Family Member</option>
         </select>
       </div>
 
@@ -1198,6 +1318,7 @@
       fetchStatus();
       loadFamily();
       loadEvents();
+      loadAccessLog();
       loadSettings();
       loadOutbox();
     });
@@ -1209,10 +1330,8 @@
         setTheme("light");
       } else if (saved === "dark") {
         setTheme("dark");
-      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
-        setTheme("light");
       } else {
-        setTheme("dark");
+        setTheme("light");   // light-blue theme is the default
       }
     }
 
@@ -1287,6 +1406,35 @@
       }
     }
 
+    function updateAccessBanner(faces) {
+      const el = document.getElementById("accessBanner");
+      if (!el) return;
+      faces = faces || [];
+      const granted = faces.find(f => f.status === "GRANTED");
+      const denied = faces.find(f => f.status === "DENIED");
+      const verifying = faces.find(f => f.status === "VERIFYING");
+      el.className = "access-banner";
+      el.textContent = "";
+      const sub = document.createElement("small");
+      if (denied) {
+        el.classList.add("denied");
+        el.textContent = "ACCESS DENIED";
+        sub.textContent = "Unrecognized person. Door remains locked.";
+      } else if (granted) {
+        el.classList.add("granted");
+        el.textContent = "ACCESS GRANTED - Welcome, " + granted.name;
+        sub.textContent = "Door unlock signal sent (simulated).";
+      } else if (verifying) {
+        el.classList.add("verifying");
+        el.textContent = "Verifying identity...";
+        sub.textContent = "Please look at the camera.";
+      } else {
+        el.textContent = "Waiting for a visitor...";
+        sub.textContent = "";
+      }
+      if (sub.textContent) el.appendChild(sub);
+    }
+
     // --- Tab Switcher ---
     function switchTab(tabId) {
       document.querySelectorAll(".tab-pane").forEach(el => el.classList.remove("active"));
@@ -1295,7 +1443,7 @@
       const btn = document.getElementById(`tabBtn-${tabId.replace("Tab", "")}`);
       if (btn) btn.classList.add("active");
 
-      if (tabId === 'eventsTab') loadEvents();
+      if (tabId === 'eventsTab') { loadEvents(); loadAccessLog(); }
       if (tabId === 'familyTab') loadFamily();
       if (tabId === 'settingsTab') loadOutbox();
     }
@@ -1346,6 +1494,8 @@
         document.getElementById("statIntruderCount").textContent = data.total_intrusions;
         document.getElementById("statEmailsCount").textContent = data.emails_dispatched;
         document.getElementById("cameraSourceLabel").textContent = data.is_simulator ? "Virtual Simulator Mode" : "Physical Camera Active";
+        document.getElementById("simBanner").style.display = data.is_simulator ? "block" : "none";
+        updateAccessBanner(data.detected_faces);
       } catch (e) {}
     }
 
@@ -1465,14 +1615,23 @@
       try {
         const res = await fetch("/api/snapshot_current");
         const data = await res.json();
+        const err = document.getElementById("enrollError");
         if (data.success) {
           enrolledFaceBase64 = data.image_base64;
           const preview = document.getElementById("enrollPreview");
           preview.src = enrolledFaceBase64;
           preview.style.display = "block";
           document.getElementById("enrollPlaceholder").style.display = "none";
+          err.style.display = "none";
+        } else {
+          err.textContent = data.message || "Could not capture a frame from the camera.";
+          err.style.display = "block";
         }
-      } catch (e) {}
+      } catch (e) {
+        const err = document.getElementById("enrollError");
+        err.textContent = "Snapshot failed: " + e;
+        err.style.display = "block";
+      }
     }
 
     function handleEnrollFileUpload(event) {
@@ -1620,7 +1779,118 @@
       } catch (e) {}
     }
 
+    // --- Access history (granted / denied) ---
+    function escHtml(t) {
+      return String(t == null ? "" : t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    }
+
+    function showLog(which) {
+      const access = which === "access";
+      document.getElementById("accessLogPanel").style.display = access ? "block" : "none";
+      document.getElementById("incidentsPanel").style.display = access ? "none" : "block";
+      document.getElementById("logBtnAccess").classList.toggle("active", access);
+      document.getElementById("logBtnIncidents").classList.toggle("active", !access);
+      if (access) loadAccessLog(); else loadEvents();
+    }
+
+    async function loadAccessLog() {
+      try {
+        const res = await fetch("/api/access-log?limit=60");
+        const data = await res.json();
+        const box = document.getElementById("accessLogContainer");
+        if (!data.entries || data.entries.length === 0) {
+          box.innerHTML = `
+            <div style="text-align: center; padding: 40px 10px; color: var(--text-faint);">
+              <i class="fa-solid fa-clipboard-list" style="font-size: 32px; margin-bottom: 8px; display: block;"></i>
+              <p style="font-size: 13px;">No access attempts recorded yet.</p>
+              <p style="font-size: 11px; margin-top: 4px;">Entries appear when someone stands in front of the camera.</p>
+            </div>`;
+          return;
+        }
+        box.innerHTML = data.entries.map(e => {
+          const ok = e.result === "GRANTED";
+          return `<div class="access-row">
+            <div>
+              <div class="access-name">${escHtml(e.person_name)}</div>
+              <div class="access-time">${escHtml(e.timestamp)}</div>
+            </div>
+            <span class="${ok ? "badge-granted" : "badge-denied"}">${ok ? "ACCESS GRANTED" : "ACCESS DENIED"}</span>
+          </div>`;
+        }).join("");
+      } catch (err) {}
+    }
+
+    async function clearAccessLog() {
+      if (!confirm("Delete the entire access history? This cannot be undone.")) return;
+      const pin = prompt("Enter the security PIN to confirm:");
+      if (!pin) return;
+      try {
+        const res = await fetch("/api/access-log/clear", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: pin })
+        });
+        const data = await res.json();
+        alert(data.message);
+        loadAccessLog();
+      } catch (err) {
+        alert("Could not clear the access history: " + err);
+      }
+    }
+
+    setInterval(() => {
+      const tab = document.getElementById("eventsTab");
+      const panel = document.getElementById("accessLogPanel");
+      if (tab && panel && tab.classList.contains("active") && panel.style.display !== "none") loadAccessLog();
+    }, 4000);
+
     // --- Settings & Database ---
+    async function clearEvents() {
+      if (!confirm("Delete ALL intrusion records and their snapshot photos? This cannot be undone.")) return;
+      const pin = prompt("Enter the security PIN to confirm:");
+      if (!pin) return;
+      try {
+        const res = await fetch("/api/events/clear", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: pin })
+        });
+        const data = await res.json();
+        alert(data.message);
+        loadEvents();
+        fetchStatus();
+      } catch (e) {
+        alert("Could not clear records: " + e);
+      }
+    }
+
+    // --- Project / team info: EDIT THIS BLOCK for your group ---
+    const PROJECT = {
+      title: "The Haven's Home Authentication System",
+      subtitle: "Facial Recognition Access Control",
+      team: "Group 2",
+      course: "CYB 301",
+      members: [
+        // { name: "Full Name", photo: "/static/team/name.jpg" },
+      ]
+    };
+
+    function renderProjectInfo() {
+      document.getElementById("brandTitle").textContent = PROJECT.title;
+      document.getElementById("brandSubtitle").textContent = PROJECT.subtitle;
+      document.title = PROJECT.title;
+      if (!PROJECT.members.length) return;
+      const esc = (t) => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+      const footer = document.createElement("section");
+      footer.className = "team-footer";
+      footer.innerHTML = `<h3>${esc(PROJECT.team || "Project Team")}</h3><p>${esc(PROJECT.course)}</p><div class="team-grid">` +
+        PROJECT.members.map(m => `<div class="team-member">${
+          m.photo ? `<img src="${esc(m.photo)}" alt="${esc(m.name)}">` : `<div class="team-avatar">${esc(m.name.charAt(0))}</div>`
+        }<b>${esc(m.name)}</b></div>`).join("") + "</div>";
+      document.body.appendChild(footer);
+    }
+    renderProjectInfo();
+
     async function loadSettings() {
       try {
         const res = await fetch("/api/settings");

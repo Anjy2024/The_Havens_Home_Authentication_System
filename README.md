@@ -1,112 +1,113 @@
-# 🛡️ Home Security System
+# The Haven's Home Authentication System
 
-An intelligent, local home security surveillance and intruder detection system built in Python, OpenCV, and Flask. Home Security enables homeowners to register family members using facial recognition, monitors the home in real time, distinguishes between authorized occupants and unknown intruders, sounds sirens, and instantly captures photo evidence and emails alerts to the homeowner.
+A local facial-recognition access-control system built with Python, OpenCV and Flask. It recognises enrolled household members, denies unknown visitors, keeps an access history, and (when armed) raises an alarm and emails the homeowner a photo of the unrecognised person.
 
----
+**Group 2 · CYB 301**
 
-## 🌟 Key Features
-
-1. **Facial Recognition & Family Enrollment**:
-   - Register family members with a single click via live camera snap or photo upload.
-   - Powered by local OpenCV LBPH biometric recognition with real-time augmentation (no third-party cloud biometrics).
-   - Real-time video HUD overlays **Green badges** (`FAMILY: [Name]`) for recognized residents.
-
-2. **Intruder Detection & Differentiation**:
-   - Analyzes all faces in the camera frame against the enrolled family database.
-   - When an unlisted individual is detected while armed, marks them in **Flashing Red** (`🚨 UNKNOWN INTRUDER`) and triggers security protocols.
-
-3. **Instant Photo Evidence & Owner Email Dispatch**:
-   - Automatically snaps high-resolution timestamped evidence (`data/snapshots/intruder_*.jpg`).
-   - Emails a high-priority security alert with the intruder's photo attached directly to the homeowner's inbox.
-   - Includes an **Offline Outbox Viewer** in the web dashboard so you can preview sent alerts even before setting up SMTP.
-
-4. **PyMySQL Database Backend**:
-   - Fully integrated with **PyMySQL** to connect directly to your MySQL/MariaDB database (`home_intruder_system`).
-   - Stores family profiles, biometric face references, intrusion logs, and email history.
-   - Configure MySQL Host, Port, User, and Password directly in the web dashboard with a live **Test Connection** button.
-   - Transparent fallback to SQLite if MySQL is ever offline.
-
-4. **Security State Management & Keypad**:
-   - Armed Modes: `ARMED_AWAY`, `ARMED_HOME`, `DISARMED`, and emergency `PANIC`.
-   - Protected by numeric Security PIN (default: `1234`).
-   - Dual-layer Siren: Hardware audible alarm (Windows `winsound`) + Browser Web Audio synthesizer.
-
-5. **Built-in Interactive Simulator**:
-   - Test bench with 1-click buttons:
-     - 🚨 *Simulate Intruder*: Injects an intruder into the frame to verify siren, snapshot, and email dispatch.
-     - 👤 *Simulate Family*: Injects an enrolled family member to verify safe recognition and alarm suppression.
+> This project is a redesign and extension of the open-source *Home Security System* by [ayomidedavid](https://github.com/ayomidedavid/Home-Owner-Authentication-System). The original authors' facial-recognition engine, alarm logic and project structure are the foundation of this work. The original repository did not include a licence file when we cloned it.
 
 ---
 
-## 🚀 Quick Start
+## What we changed
 
-### 1. Requirements
-Ensure Python 3.10+ is installed. Dependencies:
+| Area | Change |
+|---|---|
+| Dashboard | New light-blue, responsive layout that works on phones and tablets; team section; live **ACCESS GRANTED / ACCESS DENIED / VERIFYING** banner. |
+| Decisions | Per-frame results are smoothed over several frames, so a person who is still turning to the camera is shown as *Verifying* and not wrongly denied. |
+| Matching | Photos are grouped by person; a face is accepted only if the distance is under a threshold **and** clearly better than the next closest person. |
+| Access history | New log of every granted and denied attempt, with a PIN-protected clear button. |
+| Fixes | Deleting an enrolled person now works; Windows webcam backends are tried before falling back to the simulator; a missing MySQL server no longer freezes the live feed. |
+| Security | Flask secret key can be set through the `SECRET_KEY` environment variable; incident and access logs can only be cleared with the PIN. |
+
+## How recognition works
+
+1. **Detection:** OpenCV Haar cascades locate faces in each camera frame.
+2. **Preparation:** each face is cropped, resized to 200 × 200 and histogram-equalised.
+3. **Recognition:** an LBPH (Local Binary Patterns Histograms) model compares the face with every enrolled sample and returns a **distance score**. Lower is better; it is *not* a percentage.
+4. **Decision:** a person is **granted** when the best distance is at most `match_threshold` (default 60) and beats the next closest person by at least `match_margin` (default 8). Otherwise the person is **denied**.
+5. **Confirmation:** the decision must hold across several frames before it is shown, logged or used to raise an alarm.
+
+In our group's tests, enrolled members were granted with distance scores of roughly 46–50, and unenrolled people were denied with scores of 71 and above. This was a small test and lighting-dependent.
+
+## Requirements
+
+- Windows 10/11 (also runs on other systems that support OpenCV)
+- Python 3.11 or newer
+- A webcam
+- Git
+
+## Setup
+
 ```bash
+git clone <your-repository-url>
+cd <repository-folder>
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1        # Windows PowerShell
 pip install -r requirements.txt
-```
-
-### 2. Launch the System
-Run the master launcher:
-```bash
 python run.py
 ```
-This will:
-- Initialize the SQLite database and folders.
-- Start the facial recognition and surveillance engine.
-- Launch the Web Command Center at `http://127.0.0.1:5000` and open it in your browser.
 
----
+Open **http://127.0.0.1:5000** in your browser.
 
-## 💻 Web Command Center Guide
+## Using the system
 
-1. **Dashboard URL**: `http://127.0.0.1:5000`
-2. **Default Master PIN**: `1234` (configurable under *Email & Config* tab).
-3. **Register Family Members**:
-   - Go to the **Family Members** tab.
-   - Click **Register Member**.
-   - Enter name & relationship, then click **Snap from Camera** or **Upload Photo**.
-   - Click **Save & Enroll Face**. The model retrains automatically in milliseconds.
-4. **Configure Owner Email**:
-   - Go to the **Email & Config** tab.
-   - Enter your email address in **Owner Alert Email Address**.
-   - (Optional) Enable SMTP and enter your SMTP details (e.g. `smtp.gmail.com`, port `587`, and an App Password).
-   - Click **Send Test Email** to verify.
-5. **Arming the System**:
-   - Click **Arm Away** or **Arm Home** on the top navigation bar.
-   - To disarm, click **Disarm** and enter your PIN `1234` on the numeric keypad.
-6. **Test the Intruder Alert**:
-   - In the **Interactive Security Simulator** panel under the video monitor, click **Simulate Intruder**.
-   - Watch the HUD flash red, the siren activate, a snapshot save to the **Intruder Alerts** tab, and an alert dispatch to your email!
+1. **Enrol people:** *Household → Add Person*. Take a snapshot or upload a photo, type the full name, choose the role (Homeowner, Parent, Child, Family Member) and click *Enroll Face*. Use the **exact same name** for every photo of the same person, and enrol 2–3 photos (straight, slightly left, slightly right) in the lighting you will use.
+2. **Arm the system:** click **Home** or **Away**. When armed, an unrecognised person triggers the siren, a photo snapshot, an email alert and an entry under *Security Incidents*. Click **Off** and enter the PIN to disarm.
+3. **Watch decisions:** the banner above the camera shows *Access granted*, *Access denied* or *Verifying*. The *Activity Log → Access History* tab records every decision.
+4. **Settings:** set the owner name and email, optional SMTP, and the PIN in the *Settings & DB* tab.
 
----
+> The **default PIN is `1234`. Change it in Settings before use.** Your PIN, email and SMTP password are stored in `data/config.json`, which is excluded from Git.
 
-## 📂 Project Structure
+## Optional email alerts (SMTP)
+
+Without SMTP, alerts are saved in the *Dispatched Notifications Outbox*. To send real email with Gmail, create an App Password (Google Account → Security → 2-Step Verification), then in Settings tick *Enable Live SMTP*, use host `smtp.gmail.com`, port `587`, your Gmail address as username and the App Password as password. Use *Send Test Email* to check.
+
+## Optional tuning (`data/config.json`)
+
+| Key | Default | Meaning |
+|---|---|---|
+| `match_threshold` | `60` | Highest distance still accepted. Lower is stricter. |
+| `match_margin` | `8` | Required gap to the next closest person. |
+| `show_match_distance` | `true` | Show the distance on the video label. Set `false` for presentations. |
+| `unknown_confirm_seconds` | `2` | How long a face must stay unrecognised before it is denied. |
+| `confirm_votes` | `3` | Minimum matching frames before access is granted. |
+| `access_log_cooldown` | `15` | Seconds between log entries for the same person. |
+| `alert_cooldown_seconds` | `20` | Seconds between repeated intruder alerts. |
+
+## Project structure
 
 ```
-Home Security/
-├── core/
-│   ├── config.py             # Configuration manager (data/config.json)
-│   ├── database.py           # SQLite database layer (data/security.db)
-│   ├── face_engine.py        # Facial recognition and LBPH enrollment engine
-│   ├── camera.py             # Video stream and interactive virtual simulator
-│   ├── security_controller.py# Security state machine, HUD overlays, alarm siren
-│   ├── mailer.py             # HTML email dispatcher with image attachment
-│   └── models/               # Pretrained Haar cascade models & reference samples
-├── web/
-│   ├── app.py                # Flask server, MJPEG streaming, REST APIs
-│   └── templates/
-│       └── index.html        # Responsive cyber-defense Command Center UI
-├── data/
-│   ├── family/               # Enrolled family face crops
-│   ├── snapshots/            # Captured intruder incident photos
-│   └── emails/               # Local outbox email copies
-├── run.py                    # Master launcher
-├── test_system.py            # Automated test suite
-└── requirements.txt          # Python dependencies
+core/      camera, face engine, database, security controller, mailer
+web/       Flask app (app.py) and dashboard (templates/index.html)
+data/      enrolled faces, snapshots, database and settings (not committed)
+run.py     starts the application
+test_system.py   automated tests
 ```
 
----
+## Database
 
-## 🛡️ Security & Privacy Notice
-All facial biometric data and security snapshots are stored strictly locally on your machine in the `data/` directory. No facial features, video streams, or photos are transmitted to external servers or cloud providers.
+The application uses SQLite automatically. MySQL/MariaDB is optional; if it is not running the system falls back to SQLite.
+
+## Privacy and limitations
+
+- Face images are biometric data. They are stored only on the local machine, and `data/` is excluded from Git. Obtain consent before enrolling anyone.
+- LBPH is sensitive to lighting, distance and head angle. Enrol under the lighting you will use.
+- The system has **no liveness detection**; a printed photo or a phone screen may be accepted.
+- The door-unlock message is a simulation. No physical lock is connected.
+- The system was tested with a small group in one environment and should not be relied on for real-world security.
+
+## Team
+
+- Onaeko Anjolaoluwa
+- Aboaba Mobolaji
+- Adeniba Oluwaseyintanfunmi
+- Yakubu Jesse
+- Ijitola Oluwanifemi
+- Felix Joseph
+- Adegbehingbe Ronald
+- Yomi-Aworonke Tioluwanimi
+
+
+## Credits
+
+Original project: *Home Security System* by ayomidedavid. Redesign, access logging, matching improvements and dashboard by Group 2, CYB 301.

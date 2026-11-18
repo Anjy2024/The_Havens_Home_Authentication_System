@@ -1,4 +1,5 @@
 import os
+import time
 import datetime
 import sqlite3
 import pymysql
@@ -24,24 +25,29 @@ def get_mysql_connection(include_db=True):
         "charset": "utf8mb4",
         "cursorclass": pymysql.cursors.DictCursor,
         "autocommit": True,
-        "connect_timeout": 5
+        "connect_timeout": 2
     }
     if include_db:
         kwargs["database"] = db_name
 
     return pymysql.connect(**kwargs)
 
+_mysql_retry_after = 0.0
+
 def get_connection():
     """
     Returns active database connection based on config.
     Defaults to MySQL via PyMySQL; falls back to SQLite if MySQL is unavailable.
     """
+    global _mysql_retry_after
     db_type = config.get("db_type", "mysql")
-    if db_type == "mysql":
+    if db_type == "mysql" and time.time() >= _mysql_retry_after:
         try:
             return get_mysql_connection(include_db=True), "mysql"
         except Exception as e:
-            print(f"[Database] PyMySQL connection error: {e}. Falling back to SQLite.")
+            # Do not retry a dead MySQL server on every request: that froze the live feed.
+            _mysql_retry_after = time.time() + 300
+            print(f"[Database] MySQL unavailable ({e}). Using SQLite; MySQL will be retried in 5 minutes.")
 
     # SQLite fallback
     conn = sqlite3.connect(SQLITE_PATH)
@@ -91,6 +97,18 @@ def init_db():
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
                 """)
 
+                # Access log (granted / denied attempts)
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS access_log (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        timestamp DATETIME NOT NULL,
+                        person_name VARCHAR(191) NOT NULL,
+                        relationship VARCHAR(100),
+                        result VARCHAR(20) NOT NULL,
+                        confidence FLOAT
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                """)
+
                 # Outbox emails
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS outbox_emails (
@@ -134,6 +152,16 @@ def init_db():
             email_sent INTEGER DEFAULT 0,
             email_recipient TEXT,
             notes TEXT
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS access_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            person_name TEXT NOT NULL,
+            relationship TEXT,
+            result TEXT NOT NULL,
+            confidence REAL
         )
     """)
     cur.execute("""
@@ -325,6 +353,72 @@ def get_event_stats():
             "emails_dispatched": total_emails,
             "db_engine": "SQLite (Fallback)"
         }
+
+def log_access_event(person_name: str, relationship: str, result: str, confidence: float = 0.0) -> int:
+    """Record one access decision. result is 'GRANTED' or 'DENIED'."""
+    conn, engine = get_connection()
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if engine == "mysql":
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO access_log (timestamp, person_name, relationship, result, confidence) VALUES (%s, %s, %s, %s, %s)",
+                (now_str, person_name, relationship, result, confidence))
+            new_id = cur.lastrowid
+        conn.close()
+        return new_id
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO access_log (timestamp, person_name, relationship, result, confidence) VALUES (?, ?, ?, ?, ?)",
+        (now_str, person_name, relationship, result, confidence))
+    new_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return new_id
+
+def get_recent_access_events(limit: int = 100):
+    conn, engine = get_connection()
+    if engine == "mysql":
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM access_log ORDER BY id DESC LIMIT %s", (limit,))
+            rows = [_format_row(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM access_log ORDER BY id DESC LIMIT ?", (limit,))
+    rows = [_format_row(dict(r)) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+def clear_access_events() -> int:
+    conn, engine = get_connection()
+    if engine == "mysql":
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM access_log")
+            removed = cur.rowcount
+        conn.close()
+        return removed
+    cur = conn.cursor()
+    cur.execute("DELETE FROM access_log")
+    removed = cur.rowcount
+    conn.commit()
+    conn.close()
+    return removed
+
+def clear_intrusion_events() -> int:
+    """Delete every intrusion record. Returns how many rows were removed."""
+    conn, engine = get_connection()
+    if engine == "mysql":
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM intrusion_events")
+            removed = cur.rowcount
+        conn.close()
+        return removed
+    cur = conn.cursor()
+    cur.execute("DELETE FROM intrusion_events")
+    removed = cur.rowcount
+    conn.commit()
+    conn.close()
+    return removed
 
 # --- Outbox Emails Operations ---
 
