@@ -39,7 +39,7 @@ In our group's tests, enrolled members were granted with distance scores of roug
 ## Setup
 
 ```bash
-git clone <your-repository-url>
+git clone <https://github.com/Anjy2024/The_Havens_Home_Authentication_System.git>
 cd <repository-folder>
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1        # Windows PowerShell
