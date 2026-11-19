@@ -106,7 +106,8 @@ The application uses SQLite automatically. MySQL/MariaDB is optional; if it is n
 - Felix Joseph
 - Adegbehingbe Ronald
 - Yomi-Aworonke Tioluwanimi
-
+- Olusola wisdom 
+- Shonibare Emmanuel 
 
 ## Credits
 
